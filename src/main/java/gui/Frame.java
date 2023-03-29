@@ -3,6 +3,8 @@ package gui;
 import calculation.*;
 import picture.Picture;
 import picture.Pixel;
+import picture.graphPanels.GaussPanel;
+import picture.graphPanels.GraphPanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -23,7 +25,10 @@ Swing*/
 public class Frame extends JFrame {
     Picture picture = new Picture();
     JLabel imageLabel;
+    JLabel xAxisLabel;
+    JLabel yAxisLabel;
     DecimalFormat df = new DecimalFormat("#");
+    Converter converter;
 
 
         public Frame() {
@@ -40,11 +45,12 @@ public class Frame extends JFrame {
             JSplitPane splitPane = new JSplitPane();
             splitPane.setName("test");
             splitPane.setOrientation(JSplitPane.HORIZONTAL_SPLIT);
-            //лэйбл для изображения
 
+            //лэйбл для изображения
             imageLabel  = new JLabel("",  SwingConstants.CENTER);
             imageLabel.setPreferredSize(new Dimension(500, 500));
             imageLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+
             imageLabel.addMouseListener(new MouseAdapter() {
                 Pixel firstPixel = new Pixel();
                 Pixel secondPixel = new Pixel();
@@ -79,6 +85,14 @@ public class Frame extends JFrame {
                 }
             });
 
+            xAxisLabel = new JLabel();
+            xAxisLabel.setPreferredSize(new Dimension(500, 500));
+            xAxisLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+
+            yAxisLabel = new JLabel();
+            yAxisLabel.setPreferredSize(new Dimension(500, 500));
+            yAxisLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+
             //создание панелей для отображения значений
             JLabel rzOutputLabel = LabelFactory.createLabel("Enter Data to calculate Rz");
             rzOutputLabel.setPreferredSize(new Dimension(400, 50));
@@ -99,7 +113,8 @@ public class Frame extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent press) {
                     Map<Integer, Pixel> pixelList = new HashMap<>(picture.getCurrentPixelMap());
-                    List<Integer> values = Converter.getMarkedDotsValuesArray(pixelList);
+                    converter = new Converter(pixelList);
+                    List<Integer> values = converter.getMarkedDotsValuesArray();
                     rAOutputLabel.setText(BigDecimal.valueOf(RaCalculator.calculate(values)).toPlainString());
                     rMaxOutputLabel.setText(BigDecimal.valueOf(RMaxCalculator.calculate(values)).toPlainString());
                     rzOutputLabel.setText(BigDecimal.valueOf(RzCalculator.calculate(values)).toPlainString());
@@ -112,7 +127,8 @@ public class Frame extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent press) {
                     Map<Integer, Pixel> pixelList = new HashMap<>(picture.getCurrentPixelMap());
-                    GraphPanel.createAndShow(Converter.getMarkedDotsValuesArray(pixelList));
+                    converter = new Converter(pixelList);
+                    GraphPanel.createAndShow(converter.getMarkedDotsValuesArray());
                 }
             });
             buttonGraph.setPreferredSize(new Dimension(110, 100));
@@ -122,7 +138,11 @@ public class Frame extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent press) {
                     List<Pixel> pixels = new ArrayList<>(picture.getDefaultPixelMap().values());
-
+                    List<Integer> nums = new ArrayList<>();
+                    for (Pixel pixel : pixels) {
+                        nums.add(pixel.getValue());
+                    }
+                    GaussPanel.createAndShow(nums);
                 }
             });
             //установка элементов в рабочую панель
@@ -132,11 +152,18 @@ public class Frame extends JFrame {
             c.fill = GridBagConstraints.CENTER;
             c.gridx = 0;
             c.gridy = 0;
+            imagePanel.add(yAxisLabel, c);
+            c.gridx = 1;
+            c.gridy = 0;
             imagePanel.add(imageLabel, c);
+            c.gridy = 1;
+            imagePanel.add(xAxisLabel, c);
 
             JPanel outputContents = new JPanel();
             outputContents.setPreferredSize(new Dimension(100, 100));
             outputContents.setLayout(new GridBagLayout());
+            c.gridx = 0;
+            c.gridy = 0;
             outputContents.add(rzLabel, c);
             c.weighty = 1;
             c.gridx = 1;
@@ -157,6 +184,8 @@ public class Frame extends JFrame {
             outputContents.add(buttonCalculate, c);
             c.gridx = 1;
             outputContents.add(buttonGraph, c);
+            c.gridx = 2;
+            outputContents.add(gaussButton, c);
 
             splitPane.setLeftComponent(imagePanel);
             splitPane.setRightComponent(outputContents);
@@ -201,6 +230,24 @@ public class Frame extends JFrame {
                     } catch (IOException e) {
                         throw new RuntimeException("Ошибка выбора файла");
                     }
+                    //построение масштаба
+                    if (picture.getDefaultPicture().getHeight() < 300) {
+                        xAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth() + 20,
+                                picture.getDefaultPicture().getHeight()/2));
+                        yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/3,
+                                picture.getDefaultPicture().getHeight() + 40));
+                    } else {
+                        xAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth() + 20,
+                                picture.getDefaultPicture().getHeight()/7));
+                        yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/7,
+                                picture.getDefaultPicture().getHeight() + 40));
+                    }
+
+                    yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/5,
+                          picture.getDefaultPicture().getHeight()));
+
+                    xAxisLabel.setIcon(new ImageIcon(picture.drawXAxisImage()));
+                    yAxisLabel.setIcon(new ImageIcon(picture.drawYAxisImage()));
                 }
             }
         });

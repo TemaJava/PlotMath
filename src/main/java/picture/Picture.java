@@ -21,6 +21,9 @@ public class Picture {
     double middleNum = 0;
 
     int colorScale = 30;
+    PictureAxisDrawer pictureAxisDrawer;
+
+
 
     Map<Integer, Pixel> defaultPixelMap = new HashMap<>();
     Map<Integer, Pixel> currentPixelMap = new HashMap<>();
@@ -51,7 +54,6 @@ public class Picture {
                             (int) num);
                     defaultPixelMap.put(generatedId, newPixel);
                 } else {
-
                     defaultPicture.setRGB(x, y, new Color((int) (128 - num/colorScale),
                             (int) (128 - num/colorScale), (int) (128 - num/colorScale)).getRGB());
 
@@ -64,6 +66,9 @@ public class Picture {
             }
         }
         currentPixelMap.putAll(defaultPixelMap);
+
+        pictureAxisDrawer = new PictureAxisDrawer(defaultPicture.getWidth(),
+                defaultPicture.getHeight());
         return defaultPicture;
 
 
@@ -151,5 +156,13 @@ public class Picture {
             newRegex.append(" ".repeat(Math.max(0, length)));
         }
         this.regexInFile = newRegex.toString();
+    }
+
+    public BufferedImage drawXAxisImage() {
+        return pictureAxisDrawer.drawImageXAxis();
+    }
+
+    public BufferedImage drawYAxisImage() {
+        return pictureAxisDrawer.drawImageYAxis();
     }
 }
