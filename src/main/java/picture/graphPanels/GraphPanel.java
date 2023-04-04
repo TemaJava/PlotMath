@@ -26,7 +26,7 @@ public class GraphPanel extends JPanel {
             sum += integer;
         }
         double middleNum = sum/list.size();
-        
+
         XYSeries series = new XYSeries("height/pixel");
         System.out.println(list.size());
         for (int i = 0; i < list.size(); i++) {

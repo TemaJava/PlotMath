@@ -5,6 +5,7 @@ import picture.Picture;
 import picture.Pixel;
 import picture.graphPanels.GaussPanel;
 import picture.graphPanels.GraphPanel;
+import saver.CsvSaver;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -12,13 +13,14 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 /*данный класс отвечает за отрисовывание рабочего окна. основа - библиотека
 Swing*/
@@ -29,12 +31,22 @@ public class Frame extends JFrame {
     JLabel yAxisLabel;
     DecimalFormat df = new DecimalFormat("#");
     Converter converter;
+    ArrayList<File> selectedFiles;
+    int selectedFileId = 0;
+    JTextField fileNameField;
+    JTextField saveField;
+    String pathToSaveDirectory;
+    CsvSaver csvSaver;
+    JLabel rzOutputLabel;
+    JLabel rMaxOutputLabel;
+    JLabel rAOutputLabel;
+
 
 
         public Frame() {
             //отрисовка окна
             super("PlotMath");
-            setPreferredSize(new Dimension(1600, 800));
+            setPreferredSize(new Dimension(1600, 1000));
             setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
             setVisible(true);
             setResizable(false);
@@ -85,6 +97,7 @@ public class Frame extends JFrame {
                 }
             });
 
+            //Лейблы масштабов изображения
             xAxisLabel = new JLabel();
             xAxisLabel.setPreferredSize(new Dimension(500, 500));
             xAxisLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
@@ -93,12 +106,99 @@ public class Frame extends JFrame {
             yAxisLabel.setPreferredSize(new Dimension(500, 500));
             yAxisLabel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
 
+            //Панель управления и отображения названия файлов
+            fileNameField = new JTextField("Файл не выбран");
+            fileNameField.setPreferredSize(new Dimension(400, 50));
+            fileNameField.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            fileNameField.setText("Файл не выбран");
+
+            //Зона сохранения
+            saveField = new JTextField("Директория для сохранения не выбрана");
+            saveField.setPreferredSize(new Dimension(400, 50));
+            saveField.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+            saveField.setText("Файл не выбран");
+
+            JButton leftFileButton = new JButton("<--");
+            leftFileButton.setPreferredSize(new Dimension(50, 50));
+            leftFileButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (selectedFileId == 0) {
+                        selectedFileId = selectedFiles.size() - 1;
+                    } else {
+                        selectedFileId--;
+                    }
+                    try {
+                        picture.setPicture(selectedFiles.get(selectedFileId));
+                        imageLabel.setIcon(new ImageIcon(picture.getDefaultPicture()));
+                        fileNameField.setText(selectedFiles.get(selectedFileId).toPath().toString());
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+
+            JButton rightFileButton = new JButton("-->");
+            rightFileButton.setPreferredSize(new Dimension(50, 50));
+            rightFileButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (selectedFileId == selectedFiles.size()-1) {
+                        selectedFileId = 0;
+                    } else {
+                        selectedFileId++;
+                    }
+                    try {
+                        picture.setPicture(selectedFiles.get(selectedFileId));
+                        imageLabel.setIcon(new ImageIcon(picture.getDefaultPicture()));
+                        fileNameField.setText(selectedFiles.get(selectedFileId).toPath().toString());
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+
+            //Панель сохранения файлов в формат
+            JButton chooseDirectoryToSaveButton = new JButton("Выбор Директорию");
+            chooseDirectoryToSaveButton.setPreferredSize(new Dimension(150, 50));
+            chooseDirectoryToSaveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    JFileChooser saveDirectory = new JFileChooser();
+                    saveDirectory.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                    int ret = saveDirectory.showDialog( null, "Выбрать директорию");
+                    if (ret == JFileChooser.APPROVE_OPTION) {
+                        pathToSaveDirectory = saveDirectory.getSelectedFile().getPath();
+                        saveField.setText(pathToSaveDirectory);
+                        try {
+                            csvSaver = new CsvSaver(Path.of(saveDirectory.getSelectedFile().getPath()));
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                }
+            });
+
+            JButton saveButton = new JButton("Сохранить измерение");
+            saveButton.setPreferredSize(new Dimension(200, 50));
+            saveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    try {
+                        csvSaver.addData(fileNameField.getText() + "," + rAOutputLabel.getText() + "," +
+                                rzOutputLabel.getText() + "," + rMaxOutputLabel.getText());
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            });
+
             //создание панелей для отображения значений
-            JLabel rzOutputLabel = LabelFactory.createLabel("Enter Data to calculate Rz");
+            rzOutputLabel = LabelFactory.createLabel("Enter Data to calculate Rz");
             rzOutputLabel.setPreferredSize(new Dimension(400, 50));
-            JLabel rMaxOutputLabel = LabelFactory.createLabel("Enter Data to calculate Rmax");
+            rMaxOutputLabel = LabelFactory.createLabel("Enter Data to calculate Rmax");
             rMaxOutputLabel.setPreferredSize(new Dimension(400, 50));
-            JLabel rAOutputLabel = LabelFactory.createLabel("Enter Data to calculate Ra");
+            rAOutputLabel = LabelFactory.createLabel("Enter Data to calculate Ra");
             rAOutputLabel.setPreferredSize(new Dimension(400, 50));
             JLabel rzLabel = LabelFactory.createLabel("Rz");
             rzLabel.setPreferredSize(new Dimension(150, 50));
@@ -106,6 +206,10 @@ public class Frame extends JFrame {
             rMaxLabel.setPreferredSize(new Dimension(150, 50));
             JLabel rALabel = LabelFactory.createLabel("Ra");
             rALabel.setPreferredSize(new Dimension(150, 50));
+
+            //кнопки сохранения данных в csv файл
+
+
 
             //кнопка для запуска алгоритмов расчёта параметров шероховатости
             JButton buttonCalculate = new JButton("Calculate");
@@ -115,9 +219,10 @@ public class Frame extends JFrame {
                     Map<Integer, Pixel> pixelList = new HashMap<>(picture.getCurrentPixelMap());
                     converter = new Converter(pixelList);
                     List<Integer> values = converter.getMarkedDotsValuesArray();
-                    rAOutputLabel.setText(BigDecimal.valueOf(RaCalculator.calculate(values)).toPlainString());
-                    rMaxOutputLabel.setText(BigDecimal.valueOf(RMaxCalculator.calculate(values)).toPlainString());
-                    rzOutputLabel.setText(BigDecimal.valueOf(RzCalculator.calculate(values)).toPlainString());
+                    rAOutputLabel.setText(BigDecimal.valueOf(RaCalculator.calculate(values)).toPlainString() + " мкм");
+                    rMaxOutputLabel.setText(BigDecimal.valueOf(RMaxCalculator.calculate(values)).toPlainString()
+                            + " мкм");
+                    rzOutputLabel.setText(BigDecimal.valueOf(RzCalculator.calculate(values)).toPlainString() + " мкм");
                 }
             });
             buttonCalculate.setPreferredSize(new Dimension(100, 100));
@@ -158,10 +263,18 @@ public class Frame extends JFrame {
             imagePanel.add(imageLabel, c);
             c.gridy = 1;
             imagePanel.add(xAxisLabel, c);
+            c.gridy = 2;
+            c.gridx = 1;
+            imagePanel.add(fileNameField, c);
+            c.gridx = 0;
+            imagePanel.add(leftFileButton, c);
+            c.gridx = 2;
+            imagePanel.add(rightFileButton, c);
 
             JPanel outputContents = new JPanel();
             outputContents.setPreferredSize(new Dimension(100, 100));
             outputContents.setLayout(new GridBagLayout());
+            c.weighty = 1;
             c.gridx = 0;
             c.gridy = 0;
             outputContents.add(rzLabel, c);
@@ -178,8 +291,19 @@ public class Frame extends JFrame {
             outputContents.add(rALabel,c);
             c.gridx = 1;
             outputContents.add(rAOutputLabel,c);
-            c.gridx = 0;
+
             c.gridy = 3;
+            c.gridx = 0;
+            outputContents.add(chooseDirectoryToSaveButton, c);
+            c.gridx = 1;
+            outputContents.add(saveButton, c);
+
+            c.gridy = 4;
+            c.gridx = 1;
+            outputContents.add(saveField, c);
+
+            c.gridx = 0;
+            c.gridy = 5;
             c.weighty = 1;
             outputContents.add(buttonCalculate, c);
             c.gridx = 1;
@@ -204,13 +328,17 @@ public class Frame extends JFrame {
         // Создание выпадающего меню
         JMenu fileMenu = new JMenu("Файл");
         // Пункт меню "Открыть" с изображением
-        JMenuItem open = new JMenuItem("Открыть");
-        // Пункт меню из команды с выходом из программы
+        JMenuItem open = new JMenuItem("Открыть файл");
+        //Пункт меню с выбором директории
+        JMenuItem openDir = new JMenuItem("Открыть директорию");
+        // Пункт меню с выходом из программы
         JMenuItem exit = new JMenuItem(new ExitAction());
         fileMenu.add(open);
         // Добавление разделителя
+        fileMenu.add(openDir);
         fileMenu.addSeparator();
         fileMenu.add(exit);
+
 
         open.addActionListener(new ActionListener() {
             @Override
@@ -227,6 +355,7 @@ public class Frame extends JFrame {
                         imageLabel.setIcon(new ImageIcon(picture.setPicture(file)));
                         imageLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth(),
                                 picture.getDefaultPicture().getHeight()));
+                        fileNameField.setText(file.toPath().toString());
                     } catch (IOException e) {
                         throw new RuntimeException("Ошибка выбора файла");
                     }
@@ -251,8 +380,57 @@ public class Frame extends JFrame {
                 }
             }
         });
+
+        openDir.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                //логика открытия
+                JFileChooser fileOpen = new JFileChooser();
+                fileOpen.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                int ret = fileOpen.showDialog( null, "Открыть директорию");
+                if (ret == JFileChooser.APPROVE_OPTION) {
+                    //получение файлов из выбранной директории
+                    File directory = fileOpen.getSelectedFile();
+                    //фильтр для получения только csv файлов
+                    File[] filesFromDirectory = directory.listFiles();
+                    //в потоке добавляем все файлы в лист файлов
+                    selectedFiles = new ArrayList<>();
+
+                    selectedFiles.addAll(Arrays.asList(filesFromDirectory));
+
+                    try {
+                        imageLabel.setIcon(new ImageIcon(picture.setPicture(selectedFiles.get(0))));
+                        imageLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth(),
+                                picture.getDefaultPicture().getHeight()));
+                        fileNameField.setText(selectedFiles.get(0).toPath().toString());
+                    } catch (IOException e) {
+                        throw new RuntimeException("Ошибка выбора файла");
+                    }
+                    //построение масштаба
+                    if (picture.getDefaultPicture().getHeight() < 300) {
+                        xAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth() + 20,
+                                picture.getDefaultPicture().getHeight()/2));
+                        yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/3,
+                                picture.getDefaultPicture().getHeight() + 40));
+                    } else {
+                        xAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth() + 20,
+                                picture.getDefaultPicture().getHeight()/7));
+                        yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/7,
+                                picture.getDefaultPicture().getHeight() + 40));
+                    }
+
+                    yAxisLabel.setPreferredSize(new Dimension(picture.getDefaultPicture().getWidth()/5,
+                            picture.getDefaultPicture().getHeight()));
+
+                    xAxisLabel.setIcon(new ImageIcon(picture.drawXAxisImage()));
+                    yAxisLabel.setIcon(new ImageIcon(picture.drawYAxisImage()));
+                }
+            }
+        });
+
         return fileMenu;
     }
+
 
     private JMenu createSettingsMenu() {
             JMenu settingMenu = new JMenu("Настройки");
@@ -275,7 +453,6 @@ public class Frame extends JFrame {
                     TextArea regexInputArea = new TextArea(picture.getRegexInFile());
                     regexInputArea.setPreferredSize(new Dimension(300, 100));
                     regexInputArea.setFont(new Font("Times New Roman", Font.PLAIN, 28));
-
 
                     settingsPanel.setLayout(new GridBagLayout());
                     GridBagConstraints c = new GridBagConstraints();

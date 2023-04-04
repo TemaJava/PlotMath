@@ -20,7 +20,7 @@ public class Picture {
     BufferedImage currentPicture;
     double middleNum = 0;
 
-    int colorScale = 30;
+    double colorScale = 30;
     PictureAxisDrawer pictureAxisDrawer;
 
 
@@ -34,35 +34,31 @@ public class Picture {
         String[] line = lines[0].trim().split(regexInFile);
         int pictureWidth = line.length;
         chooseMiddleColor(lines);
+        chooseColorScale(lines);
         System.out.println(middleNum);
         int generatedId = 0;
         defaultPicture = new BufferedImage(pictureWidth,
                 pictureHeight, BufferedImage.TYPE_INT_RGB);
+
         for (int y = 0; y < lines.length; y++) {
             String lineFromLines = lines[y];
             String[] parts = lineFromLines.trim().split(regexInFile);
 
+
             for (int x = 0; x < parts.length; x++) {
                 generatedId++;
                 double num = Double.parseDouble(parts[x]);
-                if (num > middleNum) {
-                    defaultPicture.setRGB(x , y,  new Color((int) (128 + num/colorScale),
-                            (int) (128 + num/colorScale), (int) (128 + num/colorScale) ).getRGB());
+                double colorScale = 128 + (num * getColorScale());
+                if (colorScale > 255) {
+                    colorScale = 255;
+                }
+                    defaultPicture.setRGB(x , y,  new Color((int) colorScale,
+                            (int) colorScale, (int) colorScale ).getRGB());
 
                     Pixel newPixel = new Pixel(generatedId, x, y,
-                            new Color((int)(128 + num/colorScale), (int)(128 + num/colorScale), (int)(128 + num/colorScale)),
+                            new Color((int)colorScale, (int)colorScale, (int)colorScale),
                             (int) num);
                     defaultPixelMap.put(generatedId, newPixel);
-                } else {
-                    defaultPicture.setRGB(x, y, new Color((int) (128 - num/colorScale),
-                            (int) (128 - num/colorScale), (int) (128 - num/colorScale)).getRGB());
-
-                    Pixel newPixel = new Pixel(generatedId, x, y,
-                            new Color((int)(128 - num/colorScale), (int)(128 - num/colorScale), (int)(128 - num/colorScale)),
-                            (int)num);
-                    defaultPixelMap.put(generatedId, newPixel);
-                }
-
             }
         }
         currentPixelMap.putAll(defaultPixelMap);
@@ -99,6 +95,21 @@ public class Picture {
         middleNum = amount/num;
     }
 
+    private void chooseColorScale(String[] lines) {
+        double max = 0;
+        double num = 0;
+        for (String line : lines) {
+            String[] parts = line.trim().split(regexInFile);
+            for (String part : parts) {
+                num = Double.parseDouble(part);
+                if (max < Math.abs(num)) {
+                    max = Math.abs(num);
+                }
+            }
+        }
+        colorScale = 128/max;
+    }
+
     public String setColorScale(int scale) {
         colorScale = scale;
         return "Успешная установка скалирования";
@@ -122,6 +133,10 @@ public class Picture {
 
     public void setCurrentPicture(BufferedImage bufferedImage) {
         this.currentPicture = bufferedImage;
+    }
+
+    public double getColorScale() {
+        return this.colorScale;
     }
 
     public void setData() {
